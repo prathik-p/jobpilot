@@ -1,0 +1,55 @@
+# Companies whose career pages run on Lever / Greenhouse / Ashby.
+# These give clean public JSON feeds and simple application forms.
+#
+# How to find a slug: open the company's careers page and look at the job link.
+#   jobs.lever.co/<slug>/...           -> lever
+#   boards.greenhouse.io/<slug>/...    -> greenhouse   (also job-boards.greenhouse.io/<slug>)
+#   jobs.ashbyhq.com/<slug>/...        -> ashby
+#
+# Add Bangalore/Hyderabad product startups you'd like to work at. Run
+#   python -m jobpilot check-companies
+# to confirm each slug resolves.
+
+# Verified 2026-10-16: each slug resolves and had India/remote openings that day.
+
+lever:
+  - hevodata
+  - fampay
+  - zeta
+  - meesho
+  - cred
+  - mindtickle
+  - paytm
+
+greenhouse:
+  - hackerrank
+  - highradius
+  - sigmoid
+  - devrev
+  - glance
+  - inmobi
+  - observeai
+  - groww
+  - druva
+  - gitlab
+  - okta
+  - zscaler
+  - databricks
+  - rubrik
+  - coinbase
+  - elastic
+  - twilio
+  - mongodb
+  - datadog
+  - newrelic
+  - stripe
+  - sumologic
+  - airbnb
+
+ashby:
+  - sarvam
+  - spotdraft
+  - tekion
+  - atlan
+  - notion
+  - posthog

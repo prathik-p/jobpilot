@@ -1,0 +1,39 @@
+# Optional cloud runner: collects, scores and sends the digest. Manual trigger only
+# (Actions tab > jobpilot > Run workflow). Re-add a `schedule:` block to automate it.
+# It never applies (no browser login in CI). Run the apply/review steps on your own machine.
+# Secrets to add in GitHub > Settings > Secrets: GEMINI_API_KEY or ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
+# and CONFIG_YAML / PROFILE_YAML (paste the full contents of your local config.yaml / profile.yaml).
+name: jobpilot
+on:
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: Write config and profile (from secrets, else the examples)
+        env:
+          CONFIG_YAML: ${{ secrets.CONFIG_YAML }}
+          PROFILE_YAML: ${{ secrets.PROFILE_YAML }}
+        run: |
+          if [ -n "$CONFIG_YAML" ]; then printf '%s' "$CONFIG_YAML" > config.yaml; else cp config.example.yaml config.yaml; fi
+          if [ -n "$PROFILE_YAML" ]; then printf '%s' "$PROFILE_YAML" > profile.yaml; else cp profile.example.yaml profile.yaml; fi
+      - name: Restore job database
+        uses: actions/cache@v4
+        with:
+          path: data/jobpilot.db
+          key: jobpilot-db-${{ github.run_id }}
+          restore-keys: jobpilot-db-
+      - name: Run pipeline (no apply)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOBSPY_PROXY: ${{ secrets.JOBSPY_PROXY }}
+        run: python -m jobpilot run --no-apply
+      - uses: actions/upload-artifact@v4
+        with: { name: digest, path: data/output/digest-latest.html }

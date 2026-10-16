@@ -1,0 +1,43 @@
+# Your master profile. The AI only tailors from what is written here — it never invents skills.
+# Copy to profile.yaml (git-ignored) and replace everything with your own facts.
+personal:
+  first_name: Asha
+  last_name: Rao
+  email: asha.rao@example.com
+  phone: "+91 90000 00000"
+  linkedin: https://linkedin.com/in/your-handle
+  portfolio: https://your-portfolio.example.com
+  github: https://github.com/your-handle
+  location: Bengaluru, Karnataka, India
+
+summary: >
+  Full stack engineer building production web products with React, Next.js, Node.js and
+  PostgreSQL, plus LLM integrations.
+
+experience:
+  - title: Full Stack Engineer
+    company: Example Labs
+    location: Bengaluru (Hybrid)
+    start: 2025-01
+    end: present
+    highlights:
+      - Built checkout and subscription flows (React, Next.js, NestJS, PostgreSQL, Prisma).
+      - Shipped 12 REST API endpoints for a payments integration with Stripe webhooks.
+      - Cut API p95 latency 40% by adding caching and fixing N+1 queries.
+
+projects:
+  - name: Example Project
+    link: https://github.com/your-handle/example
+    description: Real-time dashboard with WebSockets and a React frontend.
+
+education:
+  - degree: BTech in Computer Science
+    institution: Example Institute of Technology
+    year: 2024
+
+skills:
+  languages: [JavaScript, TypeScript, Python, SQL]
+  frontend: [React, Next.js]
+  backend: [Node.js, NestJS, REST APIs, Prisma]
+  databases: [PostgreSQL, MongoDB]
+  other: [Git, WebSockets, LLM integrations]

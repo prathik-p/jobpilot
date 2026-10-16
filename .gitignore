@@ -1,0 +1,17 @@
+# secrets and personal data
+.env
+profile.yaml
+config.yaml
+
+# runtime data
+data/*.db
+data/*.db-*
+data/*.db.bak*
+data/output/
+data/browser_profile/
+data/resume.pdf
+
+# python
+.venv/
+__pycache__/
+.pytest_cache/

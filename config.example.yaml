@@ -1,0 +1,84 @@
+# ---------- JobPilot configuration ----------
+# Copy to config.yaml (git-ignored) and edit that copy.
+# Secrets (API keys, passwords) go in .env, never here.
+
+search:
+  # Search terms sent to the job boards
+  terms:
+    - "full stack developer"
+    - "full stack engineer"
+    - "software engineer react node"
+    - "next.js developer"
+    - "AI engineer full stack"
+    - "react developer"
+    - "node.js developer"
+    - "mern stack developer"
+    - "frontend developer"
+    - "backend developer"
+    - "software developer"
+    - "sde 1"
+  # Cities in priority order. weight boosts the final score.
+  locations:
+    - { name: "Bengaluru, Karnataka, India", weight: 1.0 }
+    - { name: "Hyderabad, Telangana, India", weight: 1.0 }
+    - { name: "Kochi, Kerala, India", weight: 0.85 }
+  include_remote_india: true
+  # Boards searched through JobSpy. LinkedIn left out on purpose (applied to by hand).
+  # "google" is also supported but Google usually blocks it (returns nothing, slowly).
+  sites: ["naukri", "indeed"]
+  results_per_search: 30
+  hours_old: 48
+
+filters:
+  min_experience_years: 0
+  max_experience_years: 3          # skip postings asking for more than this
+  title_must_include_any: ["full stack", "fullstack", "full-stack", "software", "frontend", "backend",
+                           "react", "node", "next", "ai engineer", "sde", "developer", "engineer"]
+  title_exclude: ["senior", "sr.", "sr ", "lead", "principal", "staff", "manager", "architect",
+                  "director", "intern", "qa", "test", "sales", "support engineer", "devops",
+                  "java developer", ".net", "dot net", "php", "android", "ios", "salesforce", "sap"]
+  description_exclude: ["10+ years", "8+ years", "7+ years", "6+ years", "5+ years"]
+  company_blocklist: []            # e.g. ["Some Consultancy"]
+
+scoring:
+  # gemini-* uses GEMINI_API_KEY; claude-* uses ANTHROPIC_API_KEY (e.g. claude-haiku-5-5)
+  model: "claude-haiku-5-5"
+  min_score_to_queue: 65           # 0-100: below this, ignored
+  min_score_to_auto_apply: 80      # at/above this, eligible for auto-apply
+  max_llm_calls_per_run: 40       # ~$0.001 each on Haiku; the cost cap below is the hard limit
+  min_seconds_between_calls: 0     # set ~6 for the Gemini free tier
+  max_cost_per_run_usd: 0.05      # hard cap: scoring + cover letters stop before exceeding it
+  effort: "low"                    # Claude only: less thinking = fewer billed tokens
+
+apply:
+  dry_run: true                     # START WITH true. Flip to false once you trust it.
+  naukri:
+    enabled: true
+    max_per_day: 25                # Naukri has its own daily cap too
+    headless: false
+  ats_forms:                       # Lever / Greenhouse / Ashby: fills the form, YOU press submit
+    enabled: true
+    headless: false
+  delay_seconds: [8, 20]           # random pause between applications
+
+# Answers for common application questions. Fill these in honestly.
+answers:
+  total_experience_years: 1
+  current_ctc_lpa: ""               # e.g. "8"
+  expected_ctc_lpa: ""              # e.g. "12"
+  notice_period: "Immediate"
+  willing_to_relocate: true
+  preferred_locations: ["Bengaluru", "Hyderabad", "Kochi"]
+  authorized_to_work_in_india: true
+  requires_sponsorship: false
+  gender: ""                       # leave blank to skip voluntary questions
+  how_did_you_hear: "Company careers page"
+
+notify:
+  telegram: true                   # needs TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID in .env
+  email: false                     # needs SMTP_* in .env
+
+paths:
+  db: data/jobpilot.db
+  resume_pdf: data/resume.pdf
+  output_dir: data/output
