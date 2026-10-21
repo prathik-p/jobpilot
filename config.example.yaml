@@ -15,8 +15,11 @@ search:
     - "mern stack developer"
     - "frontend developer"
     - "backend developer"
-    - "software developer"
     - "sde 1"
+    - "junior software engineer"
+    - "associate software engineer"
+    - "software engineer 1"
+    - "junior full stack developer"
   # Cities in priority order. weight boosts the final score.
   locations:
     - { name: "Bengaluru, Karnataka, India", weight: 1.0 }
@@ -44,10 +47,10 @@ scoring:
   # gemini-* uses GEMINI_API_KEY; claude-* uses ANTHROPIC_API_KEY (e.g. claude-haiku-5-5)
   model: "claude-haiku-5-5"
   min_score_to_queue: 65           # 0-100: below this, ignored
-  min_score_to_auto_apply: 80      # at/above this, eligible for auto-apply
-  max_llm_calls_per_run: 40       # ~$0.001 each on Haiku; the cost cap below is the hard limit
+  min_score_to_auto_apply: 75      # at/above this, eligible for auto-apply
+  max_llm_calls_per_run: 60       # ~$0.001 each on Haiku; the cost cap below is the hard limit
   min_seconds_between_calls: 0     # set ~6 for the Gemini free tier
-  max_cost_per_run_usd: 0.05      # hard cap: scoring + cover letters stop before exceeding it
+  max_cost_per_run_usd: 0.08      # hard cap: scoring + cover letters stop before exceeding it
   effort: "low"                    # Claude only: less thinking = fewer billed tokens
 
 apply:

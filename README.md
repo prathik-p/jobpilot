@@ -68,9 +68,10 @@ Do this for 2–3 days. If the `auto` list is jobs you'd genuinely apply to, set
 |---|---|
 | Run everything | `python -m jobpilot run` |
 | Go through the review queue (forms pre-filled, ~1 min each) | `python -m jobpilot review` |
-| Mark something you applied to yourself | `python -m jobpilot mark <id> applied` |
+| Mark jobs you applied to (numbered list, no ids) | `python -m jobpilot done` |
+| Mark one job by id | `python -m jobpilot mark <id> applied` |
 | Counts | `python -m jobpilot status` |
-| Spreadsheet of everything | `python -m jobpilot export` |
+| Spreadsheet of jobs you applied to (`--all` for every job) | `python -m jobpilot export` |
 
 **How jobs are routed**
 - **auto**: score at least 80 on Naukri, Lever, Greenhouse or Ashby. Naukri jobs are applied to

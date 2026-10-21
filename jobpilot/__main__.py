@@ -9,7 +9,8 @@
   python -m jobpilot list [status]    list jobs (default: queued + auto)
   python -m jobpilot show <id>        full details + cover letter for one job
   python -m jobpilot mark <id> <status>
-  python -m jobpilot export           write data/output/jobs.csv
+  python -m jobpilot done             numbered list of the review queue; type numbers to mark applied
+  python -m jobpilot export           write applied jobs to data/output/jobs.csv (--all: every job)
   python -m jobpilot check-companies  verify Lever/Greenhouse/Ashby slugs
 """
 from __future__ import annotations
@@ -138,15 +139,63 @@ def cmd_mark(s, db, args):
     print(f"{r['title']} -> {args.status}")
 
 
+def _pick(text: str, n: int) -> list[int]:
+    """'1 3 5-7' or '1,3,5-7' -> [1, 3, 5, 6, 7] (only numbers 1..n)."""
+    out = []
+    for part in text.replace(",", " ").split():
+        a, _, b = part.partition("-")
+        if a.isdigit() and (not b or b.isdigit()):
+            out += range(int(a), int(b or a) + 1)
+    return sorted({i for i in out if 1 <= i <= n})
+
+
+def cmd_done(s, db, args):
+    """Mark review-queue jobs as applied (or skipped) by number instead of by id."""
+    import webbrowser
+    while True:
+        jobs = [dict(r) for r in db.by_status("queued", "auto")]
+        if not jobs:
+            print("Review queue is empty.")
+            return
+        print()
+        for i, r in enumerate(jobs, 1):
+            print(f"{i:>3}. [{str(r['score'] or '-'):>3}] {r['site']:<10} {r['title'][:45]:<45} @ {r['company'][:22]}")
+        print("\nType numbers you applied to (e.g. 1 3 5-7). 's 2 4' = skip, 'o 3' = open in browser, Enter = done.")
+        text = input("> ").strip().lower()
+        if not text:
+            return
+        action = "applied"
+        if text[0] in "so" and (len(text) == 1 or not text[1].isdigit()):
+            action = {"s": "skipped", "o": "open"}[text[0]]
+            text = text[1:]
+        picked = [jobs[i - 1] for i in _pick(text, len(jobs))]
+        if not picked:
+            print("No valid numbers.")
+            continue
+        for r in picked:
+            if action == "open":
+                webbrowser.open(r["apply_url"] or r["url"])
+                continue
+            fields = {"status": action}
+            if action == "applied":
+                fields["applied_at"] = now()
+            db.set(r["id"], **fields)
+            print(f"  {action:<8} {r['title'][:50]} @ {r['company'][:25]}")
+
+
 def cmd_export(s, db, args):
     out = s.path("output_dir") / "jobs.csv"
-    rows = db.conn.execute("SELECT id,status,score,site,title,company,location,url,applied_at,notes "
-                           "FROM jobs ORDER BY score DESC").fetchall()
+    cols = ["applied_at", "score", "site", "title", "company", "location", "url", "status", "notes", "id"]
+    if args.all:
+        where, order = "", "score DESC"
+    else:
+        where, order = "WHERE status='applied'", "applied_at DESC"
+    rows = db.conn.execute(f"SELECT {','.join(cols)} FROM jobs {where} ORDER BY {order}").fetchall()
     with open(out, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(rows[0].keys() if rows else [])
+        w.writerow(cols)
         w.writerows([tuple(r) for r in rows])
-    print(out)
+    print(f"Wrote {len(rows)} {'jobs' if args.all else 'applied jobs'} to {out}")
 
 
 def cmd_check(s, db, args):
@@ -167,9 +216,11 @@ def main(argv=None):
     r.add_argument("--ats-only", action="store_true", help="skip job boards, only company feeds")
     c = sub.add_parser("collect")
     c.add_argument("--ats-only", action="store_true")
-    for name in ["filter", "score", "tailor", "apply", "digest", "login", "status", "export",
-                 "check-companies"]:
+    for name in ["filter", "score", "tailor", "apply", "digest", "login", "status",
+                 "check-companies", "done"]:
         sub.add_parser(name)
+    ex = sub.add_parser("export")
+    ex.add_argument("--all", action="store_true", help="every job, not just applied ones")
     rv = sub.add_parser("review")
     rv.add_argument("--limit", type=int, default=20)
     ls = sub.add_parser("list")
@@ -192,7 +243,7 @@ def main(argv=None):
         "run": cmd_run, "collect": cmd_collect, "filter": cmd_filter, "score": cmd_score,
         "tailor": cmd_tailor, "apply": cmd_apply, "digest": cmd_digest, "login": cmd_login,
         "review": cmd_review, "status": cmd_status, "list": cmd_list, "show": cmd_show,
-        "mark": cmd_mark, "export": cmd_export, "check-companies": cmd_check,
+        "mark": cmd_mark, "done": cmd_done, "export": cmd_export, "check-companies": cmd_check,
     }
     result = handlers[args.cmd](s, db, args)
     if isinstance(result, dict):

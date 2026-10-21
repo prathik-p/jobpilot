@@ -73,6 +73,14 @@ class PipelineTest(unittest.TestCase):
         v["red_flags"] = ["bond/agreement"]
         self.assertEqual(scorer.final_score(self.s, SAMPLE_JOBS[0], v), 80)
 
+    def test_seniority_penalty_only_above_max_years(self):
+        from jobpilot import scorer
+        job = SAMPLE_JOBS[0]
+        v = {"score": 70, "seniority_ok": False, "required_years": 2, "red_flags": []}
+        self.assertEqual(scorer.final_score(self.s, job, v), 70)     # 2 yrs <= max 3: no extra penalty
+        v["required_years"] = 5
+        self.assertEqual(scorer.final_score(self.s, job, v), 45)     # above max: -25
+
     def test_experience_parser(self):
         from jobpilot.filters import required_experience
         self.assertEqual(required_experience("3-5 years in React"), 3)
@@ -123,6 +131,12 @@ class PipelineTest(unittest.TestCase):
         self.assertTrue(relevant_location("Remote", True))
         self.assertFalse(relevant_location("San Francisco, CA", False))
         self.assertFalse(relevant_location("Remote - US", True))
+
+    def test_pick_numbers(self):
+        from jobpilot.__main__ import _pick
+        self.assertEqual(_pick("1 3 5-7", 10), [1, 3, 5, 6, 7])
+        self.assertEqual(_pick("2,2, 9 12", 10), [2, 9])
+        self.assertEqual(_pick("x 0", 5), [])
 
     def test_lever_parser(self):
         from unittest import mock

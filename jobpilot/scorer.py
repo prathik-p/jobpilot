@@ -93,7 +93,11 @@ def llm_score(settings: Settings, job: dict) -> dict:
 
 def final_score(settings: Settings, job: dict, verdict: dict) -> int:
     s = verdict["score"] * location_weight(settings, job.get("location", ""), bool(job.get("is_remote")))
-    if not verdict.get("seniority_ok", True):
+    # The raw score already weighs the experience gap. Only penalise again when the job asks for
+    # more than filters.max_experience_years (or the model flagged seniority without a number).
+    req = verdict.get("required_years")
+    max_years = settings.config["filters"].get("max_experience_years", 3)
+    if not verdict.get("seniority_ok", True) and (req is None or req > max_years):
         s -= 25
     s -= 10 * len(verdict.get("red_flags") or [])
     return int(max(0, min(100, round(s))))

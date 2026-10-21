@@ -20,6 +20,7 @@ lever:
   - cred
   - mindtickle
   - paytm
+  - 100ms
 
 greenhouse:
   - hackerrank
@@ -45,6 +46,7 @@ greenhouse:
   - stripe
   - sumologic
   - airbnb
+  - zenoti
 
 ashby:
   - sarvam
@@ -53,3 +55,4 @@ ashby:
   - atlan
   - notion
   - posthog
+  - signoz
