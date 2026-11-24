@@ -1,16 +1,18 @@
-# Companies whose career pages run on Lever / Greenhouse / Ashby.
-# These give clean public JSON feeds and simple application forms.
+# Company career pages read through their public job APIs (no scraping, no login).
 #
-# How to find a slug: open the company's careers page and look at the job link.
-#   jobs.lever.co/<slug>/...           -> lever
-#   boards.greenhouse.io/<slug>/...    -> greenhouse   (also job-boards.greenhouse.io/<slug>)
-#   jobs.ashbyhq.com/<slug>/...        -> ashby
+# How to tell which system a company uses: open one of its job links.
+#   jobs.lever.co/<slug>/...                     -> lever
+#   boards.greenhouse.io/<slug>/...              -> greenhouse   (also job-boards.greenhouse.io/<slug>)
+#   jobs.ashbyhq.com/<slug>/...                  -> ashby
+#   jobs.smartrecruiters.com/<CompanyId>/...     -> smartrecruiters
+#   <tenant>.wd5.myworkdayjobs.com/<Site>/job/.. -> workday: paste the URL up to <Site>
+# Entries are either the slug/URL, or `Display Name: slug-or-url`.
 #
-# Add Bangalore/Hyderabad product startups you'd like to work at. Run
+# Run
 #   python -m jobpilot check-companies
-# to confirm each slug resolves.
+# to confirm each entry resolves.
 
-# Verified 2026-10-16: each slug resolves and had India/remote openings that day.
+# Lever / Greenhouse / Ashby: verified 2026-10-16, additions 2026-11-19.
 
 lever:
   - hevodata
@@ -21,6 +23,7 @@ lever:
   - mindtickle
   - paytm
   - 100ms
+  - coupa
 
 greenhouse:
   - hackerrank
@@ -47,6 +50,19 @@ greenhouse:
   - sumologic
   - airbnb
   - zenoti
+  - fivetran
+  - netskope
+  - toast
+  - harnessinc
+  - commvault
+  - togetherai
+  - anthropic
+  - mixpanel
+  - appsflyer
+  - grafanalabs
+  - yugabyte
+  - adyen
+  - cockroachlabs
 
 ashby:
   - sarvam
@@ -56,3 +72,45 @@ ashby:
   - notion
   - posthog
   - signoz
+  - kong
+  - openai
+  - snowflake
+  - temporal
+  - amplitude
+
+# SmartRecruiters company ids (case-insensitive). India postings only.
+smartrecruiters:
+  - Freshworks: Freshworks
+  - ServiceNow: ServiceNow
+  - Bosch: BoschGroup
+  - Experian: Experian
+
+# Workday: big companies with Bengaluru / Hyderabad engineering centres. Only India postings
+# from the last search.company_max_age_days are read. Verified 2026-11-19.
+workday:
+  - NVIDIA: https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite
+  - Salesforce: https://salesforce.wd12.myworkdayjobs.com/External_Career_Site
+  - Adobe: https://adobe.wd5.myworkdayjobs.com/external_experienced
+  - Intel: https://intel.wd1.myworkdayjobs.com/External
+  - PayPal: https://paypal.wd1.myworkdayjobs.com/jobs
+  - Target: https://target.wd5.myworkdayjobs.com/targetcareers
+  - HP: https://hp.wd5.myworkdayjobs.com/ExternalCareerSite
+  - HPE: https://hpe.wd5.myworkdayjobs.com/Jobsathpe
+  - Micron: https://micron.wd1.myworkdayjobs.com/External
+  - Motorola Solutions: https://motorolasolutions.wd5.myworkdayjobs.com/Careers
+  - LSEG: https://lseg.wd3.myworkdayjobs.com/Careers
+  - Analog Devices: https://analogdevices.wd1.myworkdayjobs.com/External
+  - Wells Fargo: https://wf.wd1.myworkdayjobs.com/WellsFargoJobs
+  - State Street: https://statestreet.wd1.myworkdayjobs.com/Global
+  - Philips: https://philips.wd3.myworkdayjobs.com/jobs-and-careers
+  - Cisco: https://cisco.wd5.myworkdayjobs.com/Cisco_Careers
+  - Visa: https://visa.wd5.myworkdayjobs.com/Visa
+  - Equinix: https://equinix.wd1.myworkdayjobs.com/External
+  - Marvell: https://marvell.wd1.myworkdayjobs.com/MarvellCareers
+  - Nike: https://nike.wd1.myworkdayjobs.com/nke
+  - Chevron: https://chevron.wd5.myworkdayjobs.com/jobs
+  - athenahealth: https://athenahealth.wd1.myworkdayjobs.com/External
+  - Thomson Reuters: https://thomsonreuters.wd5.myworkdayjobs.com/External_Career_Site
+  - Broadcom: https://broadcom.wd1.myworkdayjobs.com/External_Career
+  - FIS: https://fis.wd5.myworkdayjobs.com/SearchJobs
+  - Mastercard: https://mastercard.wd1.myworkdayjobs.com/CorporateCareers

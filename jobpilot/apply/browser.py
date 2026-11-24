@@ -1,8 +1,6 @@
 """Shared Playwright browser with a persistent profile, so you log in once and stay logged in."""
 from __future__ import annotations
 
-import random
-import time
 from contextlib import contextmanager
 
 from ..config import Settings
@@ -27,7 +25,3 @@ def browser(settings: Settings, headless: bool = False):
         finally:
             ctx.close()
 
-
-def human_pause(settings: Settings):
-    lo, hi = settings.config["apply"].get("delay_seconds", [8, 20])
-    time.sleep(random.uniform(lo, hi))

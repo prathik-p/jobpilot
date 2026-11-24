@@ -5,21 +5,26 @@
 search:
   # Search terms sent to the job boards
   terms:
+    - "software engineer"
+    - "software developer"
     - "full stack developer"
-    - "full stack engineer"
-    - "software engineer react node"
-    - "next.js developer"
-    - "AI engineer full stack"
-    - "react developer"
-    - "node.js developer"
-    - "mern stack developer"
     - "frontend developer"
     - "backend developer"
+    - "react developer"
+    - "node.js developer"
+    - "python developer"
+    - "java developer"
+    - "ai engineer"
+    - "machine learning engineer"
+    - "data engineer"
+    - "data analyst"
+    - "devops engineer"
+    - "cloud engineer"
+    - "qa automation engineer"
+    - "mobile app developer"
     - "sde 1"
-    - "junior software engineer"
     - "associate software engineer"
-    - "software engineer 1"
-    - "junior full stack developer"
+    - "junior software engineer"
   # Cities in priority order. weight boosts the final score.
   locations:
     - { name: "Bengaluru, Karnataka, India", weight: 1.0 }
@@ -31,38 +36,41 @@ search:
   sites: ["naukri", "indeed"]
   results_per_search: 30
   hours_old: 48
+  # Workday / SmartRecruiters career pages: only look at postings newer than this
+  company_max_age_days: 14
 
 filters:
   min_experience_years: 0
   max_experience_years: 3          # skip postings asking for more than this
-  title_must_include_any: ["full stack", "fullstack", "full-stack", "software", "frontend", "backend",
-                           "react", "node", "next", "ai engineer", "sde", "developer", "engineer"]
-  title_exclude: ["senior", "sr.", "sr ", "lead", "principal", "staff", "manager", "architect",
-                  "director", "intern", "qa", "test", "sales", "support engineer", "devops",
-                  "java developer", ".net", "dot net", "php", "android", "ios", "salesforce", "sap"]
+  # Any tech role. Matched at the start of a word ("react" also matches "reactjs", "ml" won't match "html").
+  title_must_include_any: ["software", "developer", "engineer", "programmer", "sde", "swe",
+                           "full stack", "fullstack", "full-stack", "frontend", "front end", "front-end",
+                           "backend", "back end", "back-end", "web", "react", "node", "next.js", "angular",
+                           "vue", "python", "java", "golang", ".net", "dotnet", "php", "android", "ios",
+                           "flutter", "mobile", "ai", "ai/ml", "genai", "llm", "machine learning", "ml",
+                           "data", "analytics", "scientist", "cloud", "devops", "sre", "site reliability",
+                           "platform", "qa", "sdet", "test", "automation", "security", "cyber",
+                           "database", "dba", "etl", "salesforce", "servicenow", "sap"]
+  # Too senior, internships, and roles that aren't software (hardware, support, sales, HR)
+  title_exclude: ["senior", "sr.", "sr", "lead", "principal", "staff", "manager", "architect", "director",
+                  "head", "vp", "intern", "internship", "smts", "lmts", "pmts",
+                  "support engineer", "technical support", "desktop support", "helpdesk", "help desk",
+                  "sales", "presales", "pre-sales", "marketing", "recruiter", "recruitment", "trainer",
+                  "mechanical", "civil", "electrical", "chemical", "asic", "vlsi", "rtl", "physical design",
+                  "analog", "silicon", "hardware", "verification", "field engineer", "service engineer",
+                  "site engineer", "data entry", "back office", "security guard"]
   description_exclude: ["10+ years", "8+ years", "7+ years", "6+ years", "5+ years"]
   company_blocklist: []            # e.g. ["Some Consultancy"]
 
 scoring:
   # gemini-* uses GEMINI_API_KEY; claude-* uses ANTHROPIC_API_KEY (e.g. claude-haiku-5-5)
   model: "claude-haiku-5-5"
-  min_score_to_queue: 65           # 0-100: below this, ignored
-  min_score_to_auto_apply: 75      # at/above this, eligible for auto-apply
-  max_llm_calls_per_run: 60       # ~$0.001 each on Haiku; the cost cap below is the hard limit
+  min_score_to_queue: 55           # 0-100: at/above this, goes to your apply queue
+  cover_letter_min_score: 70       # cover letters only for the best matches (saves LLM calls)
+  max_llm_calls_per_run: 150      # ~$0.001 each on Haiku; the cost cap below is the hard limit
   min_seconds_between_calls: 0     # set ~6 for the Gemini free tier
-  max_cost_per_run_usd: 0.08      # hard cap: scoring + cover letters stop before exceeding it
+  max_cost_per_run_usd: 0.25      # hard cap: scoring + cover letters stop before exceeding it
   effort: "low"                    # Claude only: less thinking = fewer billed tokens
-
-apply:
-  dry_run: true                     # START WITH true. Flip to false once you trust it.
-  naukri:
-    enabled: true
-    max_per_day: 25                # Naukri has its own daily cap too
-    headless: false
-  ats_forms:                       # Lever / Greenhouse / Ashby: fills the form, YOU press submit
-    enabled: true
-    headless: false
-  delay_seconds: [8, 20]           # random pause between applications
 
 # Answers for common application questions. Fill these in honestly.
 answers:

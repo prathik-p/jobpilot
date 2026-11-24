@@ -1,6 +1,5 @@
 # Optional cloud runner: collects, scores and sends the digest. Manual trigger only
 # (Actions tab > jobpilot > Run workflow). Re-add a `schedule:` block to automate it.
-# It never applies (no browser login in CI). Run the apply/review steps on your own machine.
 # Secrets to add in GitHub > Settings > Secrets: GEMINI_API_KEY or ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
 # and CONFIG_YAML / PROFILE_YAML (paste the full contents of your local config.yaml / profile.yaml).
 name: jobpilot
@@ -27,13 +26,13 @@ jobs:
           path: data/jobpilot.db
           key: jobpilot-db-${{ github.run_id }}
           restore-keys: jobpilot-db-
-      - name: Run pipeline (no apply)
+      - name: Run pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           JOBSPY_PROXY: ${{ secrets.JOBSPY_PROXY }}
-        run: python -m jobpilot run --no-apply
+        run: python -m jobpilot run
       - uses: actions/upload-artifact@v4
         with: { name: digest, path: data/output/digest-latest.html }

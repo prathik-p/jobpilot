@@ -4,11 +4,10 @@ Statuses:
   new        -> collected, not yet filtered
   filtered   -> rejected by hard filters (reason in notes)
   scored     -> LLM scored, below queue threshold
-  queued     -> good match, waiting for you to review / apply
-  auto       -> eligible for auto-apply (score high + supported site)
-  applied    -> application submitted
+  queued     -> good match, waiting for you to apply
+  applied    -> you applied
   skipped    -> you chose to skip it
-  failed     -> apply attempt failed (reason in notes)
+  failed     -> couldn't apply (reason in notes)
 """
 from __future__ import annotations
 
@@ -87,6 +86,14 @@ class DB:
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        # auto-apply was removed: anything left in 'auto' joins the normal review queue
+        self.conn.execute("UPDATE jobs SET status='queued' WHERE status='auto'")
+        self.conn.commit()
+
+    def known(self) -> set[str]:
+        """Every job id and url already stored, so collectors can skip re-fetching details."""
+        rows = self.conn.execute("SELECT id, url FROM jobs").fetchall()
+        return {r[0] for r in rows} | {r[1] for r in rows if r[1]}
 
     @contextmanager
     def tx(self):
@@ -123,7 +130,8 @@ class DB:
         with self.tx() as c:
             c.execute(f"UPDATE jobs SET {sets} WHERE id=?", list(fields.values()) + [jid])
 
-    def by_status(self, *statuses: str, order: str = "score DESC") -> list[sqlite3.Row]:
+    def by_status(self, *statuses: str, order: str = "score DESC, id") -> list[sqlite3.Row]:
+        # id breaks score ties so the numbering is identical in `list`, `done` and the board
         q = ",".join("?" * len(statuses))
         return self.conn.execute(
             f"SELECT * FROM jobs WHERE status IN ({q}) ORDER BY {order}", statuses

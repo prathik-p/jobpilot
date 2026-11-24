@@ -23,7 +23,7 @@ def _card(job: dict) -> str:
         "",
         "=" * 78,
         f"[{job['score']}] {job['title']}  @  {job['company']}",
-        f"     {job.get('location','')}  |  {job.get('site')}  |  id {job['id'][:8]}",
+        f"     {job.get('location','')}  |  {job.get('site')}  |  {v.get('category', '')}  |  id {job['id'][:8]}",
         f"     {v.get('one_line','')}",
     ]
     if v.get("missing_skills"):
@@ -37,7 +37,7 @@ def _card(job: dict) -> str:
 
 
 def run(settings: Settings, db, limit: int = 20):
-    jobs = [dict(r) for r in db.by_status("queued", "auto")][:limit]
+    jobs = [dict(r) for r in db.by_status("queued")][:limit]
     if not jobs:
         print("Review queue is empty.")
         return

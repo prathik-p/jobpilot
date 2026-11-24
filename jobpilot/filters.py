@@ -6,7 +6,7 @@ import re
 from .config import Settings
 
 CITY_ALIASES = {
-    "bengaluru": ["bengaluru", "bangalore", "blr"],
+    "bengaluru": ["bengaluru", "bangalore", "blr", "bngl"],
     "hyderabad": ["hyderabad", "secunderabad", "hyd"],
     "kochi": ["kochi", "cochin", "ernakulam", "kakkanad", "infopark"],
 }
@@ -45,20 +45,44 @@ def location_weight(settings: Settings, location: str, is_remote: bool) -> float
     return 0.0  # not one of your cities
 
 
+def _has(term: str, text: str, right_boundary: bool = True) -> bool:
+    """Whole-word-ish match: 'ml' must not hit 'html'. Include terms only need a word start, so
+    'react' still matches 'reactjs'; short ones (<= 3 letters, e.g. 'ai', 'qa') need the whole word."""
+    term = term.strip().lower()
+    if not term:
+        return False
+    tail = r"(?![a-z])" if right_boundary or len(term) <= 3 else ""
+    return re.search(rf"(?<![a-z]){re.escape(term)}{tail}", text) is not None
+
+
+def title_check(settings: Settings, title: str) -> tuple[bool, str]:
+    f = settings.config["filters"]
+    title = (title or "").lower()
+    if not any(_has(k, title, right_boundary=False) for k in f.get("title_must_include_any", [])):
+        return False, "title not relevant"
+    for bad in f.get("title_exclude", []):
+        if _has(bad, title):
+            return False, f"title contains '{bad.strip().lower()}'"
+    return True, ""
+
+
+def quick_check(settings: Settings, title: str, location: str | None = None, is_remote: bool = False) -> bool:
+    """Title (+ location when known) only. Lets collectors skip fetching details for obvious misses."""
+    if not title_check(settings, title)[0]:
+        return False
+    return location is None or location_weight(settings, location, is_remote) > 0
+
+
 def check(settings: Settings, job: dict) -> tuple[bool, str]:
     f = settings.config["filters"]
-    title = (job.get("title") or "").lower()
     desc = (job.get("description") or "").lower()
     company = (job.get("company") or "").lower()
 
     if any(b.lower() == company for b in f.get("company_blocklist", [])):
         return False, "company blocklisted"
-    if not any(k in title for k in f.get("title_must_include_any", [])):
-        return False, "title not relevant"
-    for bad in f.get("title_exclude", []):
-        term = bad.strip().lower()
-        if term and re.search(rf"(?<![a-z]){re.escape(term)}(?![a-z])", title):
-            return False, f"title contains '{term}'"
+    ok, reason = title_check(settings, job.get("title"))
+    if not ok:
+        return False, reason
     for bad in f.get("description_exclude", []):
         if bad.lower() in desc:
             return False, f"description contains '{bad}'"

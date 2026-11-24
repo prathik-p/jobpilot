@@ -17,10 +17,10 @@ from .filters import location_weight
 
 log = logging.getLogger(__name__)
 
-AUTO_APPLY_SITES = {"naukri", "lever", "greenhouse", "ashby"}
-
-SYSTEM = """You are a strict technical recruiter screening jobs for one candidate.
-Judge honestly: a weak match wastes the candidate's time and reputation.
+SYSTEM = """You screen tech jobs for one early-career software engineer who applies broadly:
+any software / tech role (full stack, frontend, backend in any language, AI/ML, data, cloud/DevOps,
+QA automation, mobile, platform) that fits their experience level.
+Your score answers: "how worth applying is this, and how good are the interview odds?"
 Return ONLY a JSON object, no prose."""
 
 PROMPT = """CANDIDATE PROFILE (YAML):
@@ -33,21 +33,31 @@ Location: {location}
 Description:
 {description}
 
-Score fit from 0 to 100 where:
- 90+  nearly every core requirement is clearly met by the profile
- 75-89 strong match, 1-2 minor gaps
- 60-74 plausible but notable gaps
- <60  poor fit (wrong stack, too senior, wrong domain)
+How to judge:
+- Experience: any requirement up to {max_years} years counts as MET. Do not lower the score for
+  "candidate has fewer years than asked" unless the role needs more than {max_years} years.
+- Stack: a different language or framework is a learnable gap at this level, not a disqualifier.
+  Strong engineering fundamentals, shipped production work and AI experience transfer to most roles.
+- Ignore location and work mode (on-site / hybrid / remote); they are handled separately.
+
+Score from 0 to 100:
+ 85+   core stack overlaps strongly (JS/TS, React/Next.js, Node/NestJS, Python, SQL, LLM/AI) and the level fits
+ 70-84 software role at the right level with good overlap, or a gap that is quick to close
+ 55-69 software/tech role at the right level but mostly a different stack or domain; still worth applying
+ 40-54 a real stretch: very specialised (embedded, VLSI, kernel, deep finance/scientific domain) or mostly non-coding
+ <40   not a software/tech role, or clearly needs more than {max_years} years
 
 Return JSON exactly in this shape:
 {{
   "score": <int>,
-  "seniority_ok": <true|false>,
-  "required_years": <int or null>,
+  "category": "<one of: full stack, frontend, backend, ai/ml, data, cloud/devops, qa, mobile, other>",
+  "seniority_ok": <true if the role suits someone with up to {max_years} years>,
+  "required_years": <minimum years the JD asks for, int or null>,
   "matched_skills": [<strings>],
   "missing_skills": [<strings>],
-  "red_flags": [<e.g. "bond/agreement", "unpaid", "night shift", "body shopping", "10+ yrs">],
-  "one_line": "<why this is or isn't a fit, max 25 words>",
+  "red_flags": [<ONLY real employer problems, from: "bond/agreement", "unpaid", "fees to apply",
+                 "night shift", "body shopping", "commission only", "sales role in disguise">],
+  "one_line": "<why this is or isn't worth applying to, max 25 words>",
   "pitch_points": [<2-3 real achievements from the profile most relevant to this job>]
 }}"""
 
@@ -66,7 +76,7 @@ def heuristic_score(settings: Settings, job: dict) -> dict:
     matched = sorted(s for s in skills if re.search(rf"(?<![a-z]){re.escape(s)}(?![a-z])", text))
     core = ["react", "next.js", "node.js", "typescript", "postgresql", "nestjs", "javascript", "python"]
     core_hits = sum(1 for c in core if c in text)
-    score = min(100, 35 + 6 * core_hits + 2 * len(matched))
+    score = min(100, 45 + 5 * core_hits + 2 * len(matched))
     return {
         "score": score, "seniority_ok": True, "required_years": None,
         "matched_skills": matched, "missing_skills": [], "red_flags": [],
@@ -77,6 +87,7 @@ def heuristic_score(settings: Settings, job: dict) -> dict:
 
 def llm_score(settings: Settings, job: dict) -> dict:
     prompt = PROMPT.format(
+        max_years=settings.config["filters"].get("max_experience_years", 3),
         profile=yaml.safe_dump({k: v for k, v in settings.profile.items() if k != "personal"},
                                sort_keys=False),
         title=job["title"], company=job["company"], location=job.get("location", ""),
@@ -91,25 +102,30 @@ def llm_score(settings: Settings, job: dict) -> dict:
     return data
 
 
+# Only these count against the score; anything else the model lists is ignored, so experience,
+# stack or location complaints can't sneak in as "red flags" and double-penalise a job.
+RED_FLAGS = {"bond/agreement", "unpaid", "fees to apply", "night shift", "body shopping",
+             "commission only", "sales role in disguise"}
+
+
+def real_red_flags(verdict: dict) -> list[str]:
+    return [f for f in verdict.get("red_flags") or [] if str(f).strip().lower() in RED_FLAGS]
+
+
 def final_score(settings: Settings, job: dict, verdict: dict) -> int:
     s = verdict["score"] * location_weight(settings, job.get("location", ""), bool(job.get("is_remote")))
-    # The raw score already weighs the experience gap. Only penalise again when the job asks for
-    # more than filters.max_experience_years (or the model flagged seniority without a number).
+    # The raw score already reflects experience. Only penalise again when the job asks for more
+    # than filters.max_experience_years (or the model said it's too senior without giving a number).
     req = verdict.get("required_years")
     max_years = settings.config["filters"].get("max_experience_years", 3)
-    if not verdict.get("seniority_ok", True) and (req is None or req > max_years):
+    if (req is not None and req > max_years) or (req is None and not verdict.get("seniority_ok", True)):
         s -= 25
-    s -= 10 * len(verdict.get("red_flags") or [])
+    s -= 10 * min(2, len(real_red_flags(verdict)))
     return int(max(0, min(100, round(s))))
 
 
 def decide(settings: Settings, job: dict, score: int) -> str:
-    sc = settings.config["scoring"]
-    if score < sc["min_score_to_queue"]:
-        return "scored"
-    if score >= sc["min_score_to_auto_apply"] and job.get("site") in AUTO_APPLY_SITES:
-        return "auto"
-    return "queued"
+    return "queued" if score >= settings.config["scoring"]["min_score_to_queue"] else "scored"
 
 
 def score_jobs(settings: Settings, db) -> dict:
@@ -118,7 +134,7 @@ def score_jobs(settings: Settings, db) -> dict:
     use_llm = llm.available(settings.config["scoring"]["model"])
     if not use_llm:
         log.warning("no API key for %s — using keyword heuristic scoring", settings.config["scoring"]["model"])
-    stats = {"scored": 0, "queued": 0, "auto": 0, "errors": 0}
+    stats = {"scored": 0, "queued": 0, "errors": 0}
     for row in rows:
         job = dict(row)
         if use_llm and budget <= 0:

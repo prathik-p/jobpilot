@@ -73,8 +73,9 @@ def cover_letter(settings: Settings, job: dict) -> str:
 
 def tailor_pending(settings: Settings, db) -> int:
     n = 0
-    for row in db.by_status("queued", "auto"):
-        if row["cover_letter"]:
+    min_score = settings.config["scoring"].get("cover_letter_min_score", 0)
+    for row in db.by_status("queued"):
+        if row["cover_letter"] or (row["score"] or 0) < min_score:
             continue
         try:
             db.set(row["id"], cover_letter=cover_letter(settings, dict(row)))

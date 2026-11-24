@@ -1,17 +1,18 @@
 # JobPilot
 
-Finds full-stack jobs in Bengaluru, Hyderabad and Kochi every few hours, scores them against your
-profile with an LLM (Gemini or Claude), writes a cover letter for each good match, auto-applies on Naukri where it's
-safe, pre-fills Lever/Greenhouse/Ashby forms for you, and sends you a digest.
+Finds early-career tech jobs (any software role asking for up to 3 years) in Bengaluru, Hyderabad
+and Kochi every few hours, scores how worth applying each one is with an LLM (Gemini or Claude),
+writes a cover letter for the best matches, and sends you a digest. You apply yourself; for
+Lever/Greenhouse/Ashby jobs, `review` pre-fills the form and you press Submit.
 
 ```
-collect ──> filter ──> score (LLM)   ──> cover letter ──> apply / review ──> digest
-JobSpy +     experience,   0-100 fit,       honest, from       Naukri auto      HTML +
-ATS feeds    title, city   gaps, red flags  profile.yaml only  ATS pre-fill     Telegram
+collect ──────────> filter ──────> score (LLM) ────> cover letter ──> digest ──> you apply
+Naukri + Indeed     experience,    0-100 worth       best matches,    HTML +     review / done
++ ~90 company       title, city    applying, gaps    from profile     Telegram
+  career pages
 ```
 
-**Safety defaults:** `dry_run: true` in `config.yaml` (it clicks nothing until you flip it).
-LinkedIn is used for discovery only, never automated, because LinkedIn bans accounts for it.
+Nothing is ever submitted automatically. LinkedIn is not scraped, because LinkedIn bans accounts for it.
 
 ## 1. Setup (once, about 15 minutes)
 
@@ -42,25 +43,27 @@ Then:
    uses facts written here, so keep it accurate.
 4. **`config.yaml`**: fill in `answers` (current and expected CTC, notice period). Adjust
    `terms`, `filters` and the score thresholds if you like.
-5. **`companies.yaml`**: add startups you like that hire on Lever/Greenhouse/Ashby (instructions
-   inside the file), then run `python -m jobpilot check-companies`.
-6. **Naukri login**: run `python -m jobpilot login`, sign in by hand in the window that opens,
-   then press Enter. No password is stored; the browser session is saved locally.
+5. **`companies.yaml`**: company career pages on Lever, Greenhouse, Ashby, SmartRecruiters and
+   Workday (how to add one is explained inside the file). Run `python -m jobpilot check-companies`
+   after editing.
+6. **Job site logins (optional)**: run `python -m jobpilot login`, sign in by hand in the window
+   that opens, then press Enter. `review` reuses that browser session. No password is stored.
 7. **Telegram digest (optional)**: create a bot with @BotFather, get your chat id from
    @userinfobot, and put both in `.env`.
 
-## 2. First runs (dry run)
+## 2. First run
 
 ```bash
-python -m jobpilot run          # full pipeline, Naukri step only pretends to click
-python -m jobpilot list         # what it found
+python -m jobpilot run          # collect, filter, score, cover letters, digest
+python -m jobpilot list         # your apply queue
 python -m jobpilot show <id>    # score reasoning + cover letter
 ```
 
-Open `data/output/digest-latest.html` to see the day's matches.
-
-Do this for 2–3 days. If the `auto` list is jobs you'd genuinely apply to, set
-`apply.dry_run: false`. If not, raise `min_score_to_auto_apply` or tighten the filters.
+Then run `python -m jobpilot board` (or double-click `scripts\board.bat`). It opens the
+matches in your browser, where each job has a green ✓ (applied) and a red ✗ (discard) that save
+immediately, with Undo. The Applied and Discarded tabs list everything you've marked, each with a
+"Back to queue" button. Leave the window running while you use the page and press Ctrl+C when done.
+`data/output/digest-latest.html` is the same page as a read-only snapshot.
 
 ## 3. Daily use
 
@@ -68,17 +71,23 @@ Do this for 2–3 days. If the `auto` list is jobs you'd genuinely apply to, set
 |---|---|
 | Run everything | `python -m jobpilot run` |
 | Go through the review queue (forms pre-filled, ~1 min each) | `python -m jobpilot review` |
-| Mark jobs you applied to (numbered list, no ids) | `python -m jobpilot done` |
+| **Tick off jobs in the browser (✓ applied / ✗ discard)** | `python -m jobpilot board` |
+| Same in the terminal (numbered list, same numbers as the board) | `python -m jobpilot done` |
 | Mark one job by id | `python -m jobpilot mark <id> applied` |
 | Counts | `python -m jobpilot status` |
 | Spreadsheet of jobs you applied to (`--all` for every job) | `python -m jobpilot export` |
 
 **How jobs are routed**
-- **auto**: score at least 80 on Naukri, Lever, Greenhouse or Ashby. Naukri jobs are applied to
-  automatically (up to 25 a day). ATS jobs are pre-filled in `review` and you press Submit.
-- **queued**: score 65–79, or from LinkedIn/Indeed/Google, or Naukri asked screening questions.
-  These go to `review`.
+- **queued**: score at least `min_score_to_queue` (55). These are your apply queue (`list`,
+  `review`, `done`, digest). Cover letters are written for scores of `cover_letter_min_score` (70) and up.
 - **scored / filtered**: rejected, with the reason saved in `notes`.
+
+**How scoring works.** The score answers "how worth applying is this?" for an early-career
+engineer, not "how exactly does it match my stack". Experience asks up to `max_experience_years`
+count as met; a different language or framework is a gap, not a disqualifier. Location is handled
+separately (city weights in `config.yaml`). Only real employer problems (bond, unpaid, night shift,
+body shopping, fees, commission-only, disguised sales) count as red flags, at -10 each, two at most.
+After changing filters or scoring, `python -m jobpilot requeue --days 7` re-checks recently rejected jobs.
 
 ## 4. Scheduling
 
@@ -89,13 +98,12 @@ Do this for 2–3 days. If the `auto` list is jobs you'd genuinely apply to, set
 
 **Windows**: run `scripts\schedule_windows.ps1` once in PowerShell.
 
-**GitHub Actions (optional)**: `.github/workflows/jobpilot.yml` runs collect, score and digest
-in the cloud every 4 hours and never applies. Use a **private** repo and add your keys as
+**GitHub Actions (optional)**: `.github/workflows/jobpilot.yml` runs the pipeline in the cloud
+(manual trigger; add a `schedule:` block to automate). Use a **private** repo and add your keys as
 repository secrets, plus `CONFIG_YAML` and `PROFILE_YAML` (the full contents of your local files),
-since those aren't committed. Your laptop then only needs to run `apply` and `review`.
+since those aren't committed.
 
-The computer must be awake for the local schedule. The Naukri step needs your saved login, so it
-only runs locally.
+The computer must be awake for the local schedule.
 
 ## 5. Tuning
 
@@ -103,9 +111,10 @@ only runs locally.
 - Missing good jobs: lower thresholds, add `terms`, or increase `hours_old`.
 - LinkedIn returns nothing: it blocks scrapers aggressively. Add `JOBSPY_PROXY` in `.env`, or
   remove `linkedin` from `sites`.
-- API cost: each scored job is one LLM call, capped by `max_llm_calls_per_run`. Hard filters
-  run first so you don't pay for obviously wrong jobs.
-- Naukri page changed: selectors are at the top of `jobpilot/apply/naukri.py`.
+- API cost: each scored job is one LLM call (about $0.001 on Haiku), capped by
+  `max_llm_calls_per_run` and `max_cost_per_run_usd`. Hard filters run first so you don't pay for
+  obviously wrong jobs. Jobs over the cap stay `new` and are scored next run.
+- More companies: add Workday / SmartRecruiters / Lever / Greenhouse / Ashby pages to `companies.yaml`.
 
 ## 6. Tests
 
@@ -119,13 +128,14 @@ These run offline, with no API key, network or browser.
 ```
 config.yaml           search, filters, thresholds, standard answers
 profile.yaml          your facts (source of truth for scoring and letters)
-companies.yaml        Lever / Greenhouse / Ashby company slugs
-jobpilot/collectors   JobSpy boards + ATS JSON feeds
+companies.yaml        company career pages (Lever, Greenhouse, Ashby, SmartRecruiters, Workday)
+jobpilot/collectors   JobSpy boards + company career page feeds
 jobpilot/filters.py   experience / title / city rules
 jobpilot/scorer.py    LLM scoring + routing
 jobpilot/tailor.py    cover letters
-jobpilot/apply/       Naukri auto-apply, ATS form pre-fill
+jobpilot/apply/       browser session + ATS form pre-fill (used by review)
 jobpilot/review.py    interactive review queue
 jobpilot/digest.py    HTML / Telegram / email
+jobpilot/board.py     local page with applied / discard buttons (`board`)
 data/                 SQLite DB, resume, browser session, digests (git-ignored)
 ```

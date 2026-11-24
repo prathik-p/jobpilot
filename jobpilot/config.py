@@ -26,10 +26,6 @@ class Settings:
         p = Path(self.config["paths"][key])
         return p if p.is_absolute() else self.root / p
 
-    @property
-    def dry_run(self) -> bool:
-        return bool(self.config["apply"].get("dry_run", True))
-
 
 def _load_yaml(path: Path) -> dict:
     if not path.exists():
